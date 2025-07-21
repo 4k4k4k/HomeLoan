@@ -40,13 +40,42 @@
             transform: translateY(-5px);
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
         }
+        .fade-in {
+            animation: fadeIn 0.8s ease-in;
+        }
+        @keyframes fadeIn {
+            from { 
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .slide-up {
+            animation: slideUp 0.6s ease-out;
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        html {
+            scroll-behavior: smooth;
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
         
         // Icon components using Lucide
         const Icon = ({ name, className }) => {
@@ -65,9 +94,10 @@
             const [loading, setLoading] = useState(false);
             const [results, setResults] = useState(null);
             const [error, setError] = useState('');
-            const [showLeadForm, setShowLeadForm] = useState(false);
             const [leadSubmitted, setLeadSubmitted] = useState(false);
             const [valueWarning, setValueWarning] = useState('');
+            const [showResults, setShowResults] = useState(false);
+            const resultsRef = useRef(null);
 
             // IMPORTANT: Replace this with your Google Apps Script URL
             const API_URL = 'https://script.google.com/macros/s/AKfycbxvC8IJ7OigNMRnU-5h6emNhZY3soMKdhjAPX16lymymxDWXXlbqbLnTGHduFo6IVX_/exec';
@@ -77,7 +107,15 @@
 
             useEffect(() => {
                 lucide.createIcons();
-            }, [results, showLeadForm, leadSubmitted, error]);
+            }, [results, showResults, leadSubmitted, error]);
+
+            useEffect(() => {
+                if (showResults && resultsRef.current) {
+                    setTimeout(() => {
+                        resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                }
+            }, [showResults]);
 
             const formatCurrency = (amount) => {
                 if (amount >= 10000000) {
@@ -102,6 +140,7 @@
             const handleCalculate = async () => {
                 setError('');
                 setValueWarning('');
+                setShowResults(false);
                 
                 if (!propertyValue || !creditScore) {
                     setError('Please fill all fields');
@@ -124,7 +163,9 @@
                     
                     if (data.status === 'success') {
                         setResults(data);
-                        setShowLeadForm(true);
+                        setTimeout(() => {
+                            setShowResults(true);
+                        }, 300);
                     } else {
                         setError('Unable to fetch recommendations. Please try again.');
                     }
@@ -161,7 +202,6 @@
                     });
                     
                     setLeadSubmitted(true);
-                    setShowLeadForm(false);
                 } catch (err) {
                     console.error('Lead submission error:', err);
                 }
@@ -177,14 +217,14 @@
 
             return (
                 <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-                    {/* Header with Logo */}
-                    <div className="bg-white shadow-lg">
-                        <div className="max-w-7xl mx-auto px-4 py-8">
+                    {/* Header with Large Logo */}
+                    <div className="bg-white shadow-xl">
+                        <div className="max-w-7xl mx-auto px-4 py-12 md:py-16">
                             <div className="flex justify-center">
                                 <img 
                                     src={LOGO_URL} 
                                     alt="NoBroker Home Loans" 
-                                    className="h-20 md:h-24"
+                                    className="h-32 md:h-48 lg:h-56 object-contain"
                                     onError={(e) => {e.target.style.display = 'none'}}
                                 />
                             </div>
@@ -194,253 +234,282 @@
                     {/* Main Content */}
                     <div className="max-w-5xl mx-auto p-4 py-8">
                         {/* Form Card */}
-                        <div className="bg-white rounded-2xl card-shadow p-8 mb-8 hover-scale">
-                            <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center text-gray-800">
-                                Calculate Your Home Loan Eligibility
-                            </h2>
-                            
-                            <div className="space-y-8">
-                                <div className="grid md:grid-cols-2 gap-8">
-                                    {/* Property Value */}
-                                    <div>
-                                        <label className="block text-base font-semibold text-gray-700 mb-3">
-                                            Property Value (in Lakhs)
-                                        </label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                <Icon name="indian-rupee" className="h-6 w-6 text-gray-400" />
-                                            </div>
-                                            <input
-                                                type="number"
-                                                value={propertyValue}
-                                                onChange={handlePropertyValueChange}
-                                                placeholder="Enter value in Lakhs"
-                                                className="pl-12 w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-red-200 focus:border-red-500 transition-all"
-                                                min="0"
-                                            />
-                                        </div>
-                                        <p className="mt-2 text-sm text-gray-600">E.g., enter 50 for ₹50 Lakhs, 350 for ₹3.5 Crore</p>
-                                        {valueWarning && (
-                                            <p className="mt-2 text-sm text-amber-600 font-medium flex items-center">
-                                                <Icon name="alert-triangle" className="h-4 w-4 mr-1" />
-                                                {valueWarning}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Credit Score */}
-                                    <div>
-                                        <label className="block text-base font-semibold text-gray-700 mb-3">
-                                            Credit Score (CIBIL)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={creditScore}
-                                            onChange={(e) => setCreditScore(e.target.value)}
-                                            placeholder="Enter your CIBIL score"
-                                            className={`w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-red-200 focus:border-red-500 transition-all ${creditScore && creditScoreColor(creditScore)}`}
-                                            min="300"
-                                            max="900"
-                                        />
-                                        <p className="mt-2 text-sm text-gray-600">Your CIBIL score (300-900)</p>
-                                    </div>
-                                </div>
-
-                                {error && (
-                                    <div className="flex items-center space-x-3 text-red-600 bg-red-50 p-4 rounded-xl">
-                                        <Icon name="alert-circle" className="h-6 w-6" />
-                                        <span className="text-base font-medium">{error}</span>
-                                    </div>
-                                )}
-
-                                <button
-                                    onClick={handleCalculate}
-                                    disabled={loading}
-                                    className="w-full gradient-bg text-white py-4 px-8 rounded-xl text-lg font-bold hover:opacity-90 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center shadow-lg"
-                                >
-                                    {loading ? (
-                                        <>
-                                            <Icon name="loader-2" className="h-6 w-6 mr-3 animate-spin" />
-                                            Calculating Best Options...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Icon name="calculator" className="h-6 w-6 mr-3" />
-                                            Get Best Bank Recommendations
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Lead Capture Form */}
-                        {showLeadForm && !leadSubmitted && (
-                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-8 mb-8 hover-scale">
-                                <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                                    Get Expert Assistance with Your Home Loan
-                                </h3>
-                                <p className="text-base text-gray-700 mb-6">
-                                    Our experts will help you get the best deal and guide you through the entire process
-                                </p>
+                        {!showResults && (
+                            <div className="bg-white rounded-2xl card-shadow p-8 mb-8 hover-scale fade-in">
+                                <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center text-gray-800">
+                                    Calculate Your Home Loan Eligibility
+                                </h2>
                                 
-                                <div className="grid md:grid-cols-3 gap-4">
-                                    <div>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                <Icon name="user" className="h-5 w-5 text-gray-400" />
+                                <div className="space-y-8">
+                                    <div className="grid md:grid-cols-2 gap-8">
+                                        {/* Property Value */}
+                                        <div>
+                                            <label className="block text-base font-semibold text-gray-700 mb-3">
+                                                Property Value (in Lakhs)
+                                            </label>
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                    <Icon name="indian-rupee" className="h-6 w-6 text-gray-400" />
+                                                </div>
+                                                <input
+                                                    type="number"
+                                                    value={propertyValue}
+                                                    onChange={handlePropertyValueChange}
+                                                    placeholder="Enter value in Lakhs"
+                                                    className="pl-12 w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-red-200 focus:border-red-500 transition-all"
+                                                    min="0"
+                                                />
                                             </div>
-                                            <input
-                                                type="text"
-                                                value={name}
-                                                onChange={(e) => setName(e.target.value)}
-                                                placeholder="Your Name"
-                                                className="pl-12 w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500"
-                                            />
-                                        </div>
-                                    </div>
-                                    
-                                    <div>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                <Icon name="mail" className="h-5 w-5 text-gray-400" />
-                                            </div>
-                                            <input
-                                                type="email"
-                                                value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
-                                                placeholder="Email Address"
-                                                className="pl-12 w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500"
-                                            />
-                                        </div>
-                                    </div>
-                                    
-                                    <div>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                <Icon name="phone" className="h-5 w-5 text-gray-400" />
-                                            </div>
-                                            <input
-                                                type="tel"
-                                                value={phone}
-                                                onChange={(e) => setPhone(e.target.value)}
-                                                placeholder="Phone Number"
-                                                className="pl-12 w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <button
-                                    onClick={handleLeadSubmit}
-                                    disabled={loading}
-                                    className="mt-6 bg-blue-600 text-white py-3 px-8 rounded-xl text-base font-bold hover:bg-blue-700 transition-all disabled:bg-gray-400 shadow-lg"
-                                >
-                                    <Icon name="headphones" className="inline h-5 w-5 mr-2" />
-                                    Get Expert Help
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Lead Submitted Success */}
-                        {leadSubmitted && (
-                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl p-8 mb-8 text-center hover-scale">
-                                <Icon name="check-circle-2" className="h-16 w-16 text-green-600 mx-auto mb-4" />
-                                <h3 className="text-2xl font-bold text-gray-900 mb-3">Thank You!</h3>
-                                <p className="text-lg text-gray-700">
-                                    Our home loan expert will contact you within 24 hours to assist with your application.
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Results */}
-                        {results && results.recommendations && results.recommendations.length > 0 && (
-                            <div className="space-y-8">
-                                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-2">
-                                    Top {results.recommendations.length} Bank Recommendations
-                                </h3>
-                                <p className="text-center text-gray-600 mb-6">Based on your profile, these banks offer the best terms</p>
-                                
-                                {results.recommendations.map((bank, index) => (
-                                    <div key={index} className="bg-white rounded-2xl card-shadow overflow-hidden hover-scale">
-                                        {/* Bank Header */}
-                                        <div className="gradient-bg p-6">
-                                            <div className="flex justify-between items-center">
-                                                <div>
-                                                    <h4 className="text-2xl md:text-3xl font-bold text-white">{bank.bankName}</h4>
-                                                    {bank.bankType === 'Nationalised' && (
-                                                        <span className="inline-block mt-2 bg-white/20 text-white px-4 py-1 rounded-full text-sm font-medium backdrop-blur">
-                                                            Nationalised Bank
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="text-center">
-                                                    <p className="text-3xl md:text-4xl font-bold text-white">
-                                                        {formatCurrency(bank.maxLoanAmount)}
-                                                    </p>
-                                                    <p className="text-sm text-white/90 mt-1">Maximum Loan Amount</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Bank Details */}
-                                        <div className="p-8">
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                                <div className="text-center p-6 bg-gradient-to-br from-red-50 to-pink-50 rounded-xl">
-                                                    <Icon name="percent" className="h-8 w-8 text-red-500 mx-auto mb-3" />
-                                                    <p className="text-sm text-gray-600 mb-2">Interest Rate</p>
-                                                    <p className="text-3xl font-bold text-red-600">{bank.roi}%</p>
-                                                    <p className="text-xs text-gray-500 mt-1">per annum</p>
-                                                </div>
-                                                <div className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl">
-                                                    <Icon name="pie-chart" className="h-8 w-8 text-green-500 mx-auto mb-3" />
-                                                    <p className="text-sm text-gray-600 mb-2">LTV Ratio</p>
-                                                    <p className="text-3xl font-bold text-green-600">{bank.ltvPercent}%</p>
-                                                    <p className="text-xs text-gray-500 mt-1">of property value</p>
-                                                </div>
-                                                <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl">
-                                                    <Icon name="home" className="h-8 w-8 text-blue-500 mx-auto mb-3" />
-                                                    <p className="text-sm text-gray-600 mb-2">Property Value</p>
-                                                    <p className="text-3xl font-bold text-blue-600">{formatCurrency(results.propertyValue)}</p>
-                                                    <p className="text-xs text-gray-500 mt-1">total value</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Property Types */}
-                                            {bank.propertyTypes && bank.propertyTypes.length > 0 && (
-                                                <div className="border-t-2 pt-6">
-                                                    <p className="text-base font-bold text-gray-800 mb-4">
-                                                        Accepted Property Types:
-                                                    </p>
-                                                    <div className="flex flex-wrap gap-3">
-                                                        {bank.propertyTypes.map((type, idx) => (
-                                                            <span key={idx} className="flex items-center space-x-2 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold">
-                                                                <Icon name="check-circle-2" className="h-5 w-5" />
-                                                                <span>{type}</span>
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
+                                            <p className="mt-2 text-sm text-gray-600">E.g., enter 50 for ₹50 Lakhs, 350 for ₹3.5 Crore</p>
+                                            {valueWarning && (
+                                                <p className="mt-2 text-sm text-amber-600 font-medium flex items-center">
+                                                    <Icon name="alert-triangle" className="h-4 w-4 mr-1" />
+                                                    {valueWarning}
+                                                </p>
                                             )}
                                         </div>
-                                    </div>
-                                ))}
 
-                                {results.totalEligibleBanks > 2 && (
-                                    <p className="text-center text-gray-600 text-base mt-8">
-                                        Showing top 2 out of {results.totalEligibleBanks} eligible banks based on best ROI and LTV combination
-                                    </p>
-                                )}
+                                        {/* Credit Score */}
+                                        <div>
+                                            <label className="block text-base font-semibold text-gray-700 mb-3">
+                                                Credit Score (CIBIL)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={creditScore}
+                                                onChange={(e) => setCreditScore(e.target.value)}
+                                                placeholder="Enter your CIBIL score"
+                                                className={`w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-red-200 focus:border-red-500 transition-all ${creditScore && creditScoreColor(creditScore)}`}
+                                                min="300"
+                                                max="900"
+                                            />
+                                            <p className="mt-2 text-sm text-gray-600">Your CIBIL score (300-900)</p>
+                                        </div>
+                                    </div>
+
+                                    {error && (
+                                        <div className="flex items-center space-x-3 text-red-600 bg-red-50 p-4 rounded-xl">
+                                            <Icon name="alert-circle" className="h-6 w-6" />
+                                            <span className="text-base font-medium">{error}</span>
+                                        </div>
+                                    )}
+
+                                    <button
+                                        onClick={handleCalculate}
+                                        disabled={loading}
+                                        className="w-full gradient-bg text-white py-4 px-8 rounded-xl text-lg font-bold hover:opacity-90 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center shadow-lg"
+                                    >
+                                        {loading ? (
+                                            <>
+                                                <Icon name="loader-2" className="h-6 w-6 mr-3 animate-spin" />
+                                                Calculating Best Options...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Icon name="calculator" className="h-6 w-6 mr-3" />
+                                                Get Best Bank Recommendations
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         )}
 
-                        {/* No Results */}
-                        {results && results.recommendations && results.recommendations.length === 0 && (
-                            <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-2xl p-8 text-center hover-scale">
-                                <Icon name="alert-circle" className="h-16 w-16 text-yellow-600 mx-auto mb-4" />
-                                <h3 className="text-2xl font-bold text-gray-900 mb-3">No Eligible Banks Found</h3>
-                                <p className="text-lg text-gray-700">
-                                    No banks found for credit score {creditScore}. Please check your credit score or contact our support team for assistance.
-                                </p>
+                        {/* Results Section */}
+                        {showResults && results && (
+                            <div ref={resultsRef} className="fade-in">
+                                {/* Back Button */}
+                                <button
+                                    onClick={() => {
+                                        setShowResults(false);
+                                        setResults(null);
+                                        setLeadSubmitted(false);
+                                    }}
+                                    className="mb-6 flex items-center text-gray-600 hover:text-gray-800 transition-colors"
+                                >
+                                    <Icon name="arrow-left" className="h-5 w-5 mr-2" />
+                                    <span className="text-base font-medium">Calculate Again</span>
+                                </button>
+
+                                {/* Results */}
+                                {results.recommendations && results.recommendations.length > 0 && (
+                                    <div className="space-y-8">
+                                        <div className="text-center mb-8">
+                                            <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+                                                Your Personalized Recommendations
+                                            </h3>
+                                            <p className="text-lg text-gray-600">Based on ₹{propertyValue} Lakhs property value and {creditScore} credit score</p>
+                                        </div>
+                                        
+                                        {results.recommendations.map((bank, index) => (
+                                            <div key={index} className={`bg-white rounded-2xl card-shadow overflow-hidden hover-scale slide-up`} style={{animationDelay: `${index * 0.2}s`}}>
+                                                {/* Bank Header */}
+                                                <div className="gradient-bg p-6">
+                                                    <div className="flex justify-between items-center">
+                                                        <div>
+                                                            <h4 className="text-2xl md:text-3xl font-bold text-white">{bank.bankName}</h4>
+                                                            {bank.bankType === 'Nationalised' && (
+                                                                <span className="inline-block mt-2 bg-white/20 text-white px-4 py-1 rounded-full text-sm font-medium backdrop-blur">
+                                                                    Nationalised Bank
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-center">
+                                                            <p className="text-3xl md:text-4xl font-bold text-white">
+                                                                {formatCurrency(bank.maxLoanAmount)}
+                                                            </p>
+                                                            <p className="text-sm text-white/90 mt-1">Maximum Loan Amount</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Bank Details */}
+                                                <div className="p-8">
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                                        <div className="text-center p-6 bg-gradient-to-br from-red-50 to-pink-50 rounded-xl">
+                                                            <Icon name="percent" className="h-8 w-8 text-red-500 mx-auto mb-3" />
+                                                            <p className="text-sm text-gray-600 mb-2">Interest Rate</p>
+                                                            <p className="text-3xl font-bold text-red-600">{bank.roi}%</p>
+                                                            <p className="text-xs text-gray-500 mt-1">per annum</p>
+                                                        </div>
+                                                        <div className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl">
+                                                            <Icon name="pie-chart" className="h-8 w-8 text-green-500 mx-auto mb-3" />
+                                                            <p className="text-sm text-gray-600 mb-2">LTV Ratio</p>
+                                                            <p className="text-3xl font-bold text-green-600">{bank.ltvPercent}%</p>
+                                                            <p className="text-xs text-gray-500 mt-1">of property value</p>
+                                                        </div>
+                                                        <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl">
+                                                            <Icon name="home" className="h-8 w-8 text-blue-500 mx-auto mb-3" />
+                                                            <p className="text-sm text-gray-600 mb-2">Property Value</p>
+                                                            <p className="text-3xl font-bold text-blue-600">{formatCurrency(results.propertyValue)}</p>
+                                                            <p className="text-xs text-gray-500 mt-1">total value</p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Property Types */}
+                                                    {bank.propertyTypes && bank.propertyTypes.length > 0 && (
+                                                        <div className="border-t-2 pt-6">
+                                                            <p className="text-base font-bold text-gray-800 mb-4">
+                                                                Accepted Property Types:
+                                                            </p>
+                                                            <div className="flex flex-wrap gap-3">
+                                                                {bank.propertyTypes.map((type, idx) => (
+                                                                    <span key={idx} className="flex items-center space-x-2 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold">
+                                                                        <Icon name="check-circle-2" className="h-5 w-5" />
+                                                                        <span>{type}</span>
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {results.totalEligibleBanks > 2 && (
+                                            <p className="text-center text-gray-600 text-base mt-8">
+                                                Showing top 2 out of {results.totalEligibleBanks} eligible banks based on best ROI and LTV combination
+                                            </p>
+                                        )}
+
+                                        {/* Lead Capture Form - Now after bank suggestions */}
+                                        {!leadSubmitted && (
+                                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-8 mt-12 hover-scale slide-up" style={{animationDelay: '0.6s'}}>
+                                                <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                                                    Need Expert Help with Your Home Loan?
+                                                </h3>
+                                                <p className="text-base text-gray-700 mb-6">
+                                                    Our experts will help you get the best deal and guide you through the entire process
+                                                </p>
+                                                
+                                                <div className="grid md:grid-cols-3 gap-4">
+                                                    <div>
+                                                        <div className="relative">
+                                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                                <Icon name="user" className="h-5 w-5 text-gray-400" />
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                value={name}
+                                                                onChange={(e) => setName(e.target.value)}
+                                                                placeholder="Your Name"
+                                                                className="pl-12 w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div>
+                                                        <div className="relative">
+                                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                                <Icon name="mail" className="h-5 w-5 text-gray-400" />
+                                                            </div>
+                                                            <input
+                                                                type="email"
+                                                                value={email}
+                                                                onChange={(e) => setEmail(e.target.value)}
+                                                                placeholder="Email Address"
+                                                                className="pl-12 w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div>
+                                                        <div className="relative">
+                                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                                <Icon name="phone" className="h-5 w-5 text-gray-400" />
+                                                            </div>
+                                                            <input
+                                                                type="tel"
+                                                                value={phone}
+                                                                onChange={(e) => setPhone(e.target.value)}
+                                                                placeholder="Phone Number"
+                                                                className="pl-12 w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                {error && (
+                                                    <div className="mt-4 flex items-center space-x-2 text-red-600">
+                                                        <Icon name="alert-circle" className="h-5 w-5" />
+                                                        <span className="text-sm">{error}</span>
+                                                    </div>
+                                                )}
+                                                
+                                                <button
+                                                    onClick={handleLeadSubmit}
+                                                    disabled={loading}
+                                                    className="mt-6 bg-blue-600 text-white py-3 px-8 rounded-xl text-base font-bold hover:bg-blue-700 transition-all disabled:bg-gray-400 shadow-lg"
+                                                >
+                                                    <Icon name="headphones" className="inline h-5 w-5 mr-2" />
+                                                    Get Expert Help
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* Lead Submitted Success */}
+                                        {leadSubmitted && (
+                                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl p-8 mt-12 text-center hover-scale">
+                                                <Icon name="check-circle-2" className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                                                <h3 className="text-2xl font-bold text-gray-900 mb-3">Thank You!</h3>
+                                                <p className="text-lg text-gray-700">
+                                                    Our home loan expert will contact you within 24 hours to assist with your application.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* No Results */}
+                                {results.recommendations && results.recommendations.length === 0 && (
+                                    <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-2xl p-8 text-center hover-scale">
+                                        <Icon name="alert-circle" className="h-16 w-16 text-yellow-600 mx-auto mb-4" />
+                                        <h3 className="text-2xl font-bold text-gray-900 mb-3">No Eligible Banks Found</h3>
+                                        <p className="text-lg text-gray-700">
+                                            No banks found for credit score {creditScore}. Please check your credit score or contact our support team for assistance.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
