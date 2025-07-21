@@ -27,6 +27,19 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+        .gradient-bg {
+            background: linear-gradient(135deg, #ff4458 0%, #ff6b6b 100%);
+        }
+        .card-shadow {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        .hover-scale {
+            transition: all 0.3s ease;
+        }
+        .hover-scale:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
     </style>
 </head>
 <body>
@@ -54,9 +67,10 @@
             const [error, setError] = useState('');
             const [showLeadForm, setShowLeadForm] = useState(false);
             const [leadSubmitted, setLeadSubmitted] = useState(false);
+            const [valueWarning, setValueWarning] = useState('');
 
             // IMPORTANT: Replace this with your Google Apps Script URL
-            const API_URL = 'https://script.google.com/macros/s/AKfycbymPBjZ2xfUcjFX4gMGZGqDkQ-tvtT2-vkUwPV1tXzkFuHBXH-bLCHGr9PIgyXpLQDt/exec';
+            const API_URL = 'https://script.google.com/macros/s/AKfycbxvC8IJ7OigNMRnU-5h6emNhZY3soMKdhjAPX16lymymxDWXXlbqbLnTGHduFo6IVX_/exec';
             
             // IMPORTANT: Replace this with your NoBroker Home Loan logo URL
             const LOGO_URL = 'https://i.ibb.co/7dDCb9yx/Untitled-design-2.png';
@@ -74,8 +88,20 @@
                 return `₹${amount.toLocaleString('en-IN')}`;
             };
 
+            const handlePropertyValueChange = (e) => {
+                const value = e.target.value;
+                setPropertyValue(value);
+                
+                if (value.length >= 4) {
+                    setValueWarning('Enter value in Lakhs. E.g., enter 350 for ₹3.5 Crore');
+                } else {
+                    setValueWarning('');
+                }
+            };
+
             const handleCalculate = async () => {
                 setError('');
+                setValueWarning('');
                 
                 if (!propertyValue || !creditScore) {
                     setError('Please fill all fields');
@@ -89,8 +115,11 @@
 
                 setLoading(true);
                 
+                // Convert lakhs to actual value
+                const actualPropertyValue = parseFloat(propertyValue) * 100000;
+                
                 try {
-                    const response = await fetch(`${API_URL}?creditScore=${creditScore}&propertyValue=${propertyValue}`);
+                    const response = await fetch(`${API_URL}?creditScore=${creditScore}&propertyValue=${actualPropertyValue}`);
                     const data = await response.json();
                     
                     if (data.status === 'success') {
@@ -115,11 +144,12 @@
                 setLoading(true);
                 
                 try {
+                    const actualPropertyValue = parseFloat(propertyValue) * 100000;
                     const leadData = {
                         name,
                         email,
                         phone,
-                        propertyValue,
+                        propertyValue: actualPropertyValue,
                         creditScore,
                         topBank1: results.recommendations[0]?.bankName || '',
                         topBank2: results.recommendations[1]?.bankName || ''
@@ -141,26 +171,20 @@
 
             const creditScoreColor = (score) => {
                 if (score >= 750) return 'text-green-600';
-                if (score >= 650) return 'text-yellow-600';
+                if (score >= 650) return 'text-amber-600';
                 return 'text-red-600';
             };
 
             return (
-                <div className="min-h-screen bg-gray-50">
-                    {/* Header */}
-                    <div className="bg-white shadow-sm border-b">
-                        <div className="max-w-7xl mx-auto px-4 py-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                    <div className="bg-red-500 text-white p-2 rounded">
-                                        <Icon name="home" className="h-6 w-6" />
-                                    </div>
-                                    <h1 className="text-2xl font-bold text-gray-900">NoBroker Home Loan Calculator</h1>
-                                </div>
+                <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+                    {/* Header with Logo */}
+                    <div className="bg-white shadow-lg">
+                        <div className="max-w-7xl mx-auto px-4 py-8">
+                            <div className="flex justify-center">
                                 <img 
                                     src={LOGO_URL} 
                                     alt="NoBroker Home Loans" 
-                                    className="h-12"
+                                    className="h-20 md:h-24"
                                     onError={(e) => {e.target.style.display = 'none'}}
                                 />
                             </div>
@@ -168,75 +192,80 @@
                     </div>
 
                     {/* Main Content */}
-                    <div className="max-w-4xl mx-auto p-4 py-8">
+                    <div className="max-w-5xl mx-auto p-4 py-8">
                         {/* Form Card */}
-                        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-                            <h2 className="text-xl font-semibold mb-6 flex items-center">
-                                <Icon name="building-2" className="h-5 w-5 mr-2 text-red-500" />
+                        <div className="bg-white rounded-2xl card-shadow p-8 mb-8 hover-scale">
+                            <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center text-gray-800">
                                 Calculate Your Home Loan Eligibility
                             </h2>
                             
-                            <div className="space-y-6">
-                                <div className="grid md:grid-cols-2 gap-6">
+                            <div className="space-y-8">
+                                <div className="grid md:grid-cols-2 gap-8">
                                     {/* Property Value */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Property Value
+                                        <label className="block text-base font-semibold text-gray-700 mb-3">
+                                            Property Value (in Lakhs)
                                         </label>
                                         <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <Icon name="indian-rupee" className="h-5 w-5 text-gray-400" />
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <Icon name="indian-rupee" className="h-6 w-6 text-gray-400" />
                                             </div>
                                             <input
                                                 type="number"
                                                 value={propertyValue}
-                                                onChange={(e) => setPropertyValue(e.target.value)}
-                                                placeholder="Enter property value"
-                                                className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                                onChange={handlePropertyValueChange}
+                                                placeholder="Enter value in Lakhs"
+                                                className="pl-12 w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-red-200 focus:border-red-500 transition-all"
                                                 min="0"
                                             />
                                         </div>
-                                        <p className="mt-1 text-xs text-gray-500">Enter the total property value in rupees</p>
+                                        <p className="mt-2 text-sm text-gray-600">E.g., enter 50 for ₹50 Lakhs, 350 for ₹3.5 Crore</p>
+                                        {valueWarning && (
+                                            <p className="mt-2 text-sm text-amber-600 font-medium flex items-center">
+                                                <Icon name="alert-triangle" className="h-4 w-4 mr-1" />
+                                                {valueWarning}
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Credit Score */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <label className="block text-base font-semibold text-gray-700 mb-3">
                                             Credit Score (CIBIL)
                                         </label>
                                         <input
                                             type="number"
                                             value={creditScore}
                                             onChange={(e) => setCreditScore(e.target.value)}
-                                            placeholder="Enter credit score"
-                                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent ${creditScore && creditScoreColor(creditScore)}`}
+                                            placeholder="Enter your CIBIL score"
+                                            className={`w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-red-200 focus:border-red-500 transition-all ${creditScore && creditScoreColor(creditScore)}`}
                                             min="300"
                                             max="900"
                                         />
-                                        <p className="mt-1 text-xs text-gray-500">Your CIBIL score (300-900)</p>
+                                        <p className="mt-2 text-sm text-gray-600">Your CIBIL score (300-900)</p>
                                     </div>
                                 </div>
 
                                 {error && (
-                                    <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg">
-                                        <Icon name="alert-circle" className="h-5 w-5" />
-                                        <span className="text-sm">{error}</span>
+                                    <div className="flex items-center space-x-3 text-red-600 bg-red-50 p-4 rounded-xl">
+                                        <Icon name="alert-circle" className="h-6 w-6" />
+                                        <span className="text-base font-medium">{error}</span>
                                     </div>
                                 )}
 
                                 <button
                                     onClick={handleCalculate}
                                     disabled={loading}
-                                    className="w-full bg-red-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-red-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
+                                    className="w-full gradient-bg text-white py-4 px-8 rounded-xl text-lg font-bold hover:opacity-90 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center shadow-lg"
                                 >
                                     {loading ? (
                                         <>
-                                            <Icon name="loader-2" className="h-5 w-5 mr-2 animate-spin" />
-                                            Calculating...
+                                            <Icon name="loader-2" className="h-6 w-6 mr-3 animate-spin" />
+                                            Calculating Best Options...
                                         </>
                                     ) : (
                                         <>
-                                            <Icon name="trending-up" className="h-5 w-5 mr-2" />
+                                            <Icon name="calculator" className="h-6 w-6 mr-3" />
                                             Get Best Bank Recommendations
                                         </>
                                     )}
@@ -246,18 +275,18 @@
 
                         {/* Lead Capture Form */}
                         {showLeadForm && !leadSubmitted && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-8 mb-8 hover-scale">
+                                <h3 className="text-2xl font-bold text-gray-900 mb-4">
                                     Get Expert Assistance with Your Home Loan
                                 </h3>
-                                <p className="text-sm text-gray-600 mb-4">
-                                    Our experts will help you get the best deal and guide you through the process
+                                <p className="text-base text-gray-700 mb-6">
+                                    Our experts will help you get the best deal and guide you through the entire process
                                 </p>
                                 
                                 <div className="grid md:grid-cols-3 gap-4">
                                     <div>
                                         <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                                 <Icon name="user" className="h-5 w-5 text-gray-400" />
                                             </div>
                                             <input
@@ -265,14 +294,14 @@
                                                 value={name}
                                                 onChange={(e) => setName(e.target.value)}
                                                 placeholder="Your Name"
-                                                className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                className="pl-12 w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500"
                                             />
                                         </div>
                                     </div>
                                     
                                     <div>
                                         <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                                 <Icon name="mail" className="h-5 w-5 text-gray-400" />
                                             </div>
                                             <input
@@ -280,14 +309,14 @@
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
                                                 placeholder="Email Address"
-                                                className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                className="pl-12 w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500"
                                             />
                                         </div>
                                     </div>
                                     
                                     <div>
                                         <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                                 <Icon name="phone" className="h-5 w-5 text-gray-400" />
                                             </div>
                                             <input
@@ -295,7 +324,7 @@
                                                 value={phone}
                                                 onChange={(e) => setPhone(e.target.value)}
                                                 placeholder="Phone Number"
-                                                className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                className="pl-12 w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500"
                                             />
                                         </div>
                                     </div>
@@ -304,8 +333,9 @@
                                 <button
                                     onClick={handleLeadSubmit}
                                     disabled={loading}
-                                    className="mt-4 bg-blue-600 text-white py-2 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                                    className="mt-6 bg-blue-600 text-white py-3 px-8 rounded-xl text-base font-bold hover:bg-blue-700 transition-all disabled:bg-gray-400 shadow-lg"
                                 >
+                                    <Icon name="headphones" className="inline h-5 w-5 mr-2" />
                                     Get Expert Help
                                 </button>
                             </div>
@@ -313,10 +343,10 @@
 
                         {/* Lead Submitted Success */}
                         {leadSubmitted && (
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8 text-center">
-                                <Icon name="check-circle-2" className="h-12 w-12 text-green-600 mx-auto mb-3" />
-                                <h3 className="text-lg font-semibold text-gray-900 mb-2">Thank You!</h3>
-                                <p className="text-gray-600">
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl p-8 mb-8 text-center hover-scale">
+                                <Icon name="check-circle-2" className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                                <h3 className="text-2xl font-bold text-gray-900 mb-3">Thank You!</h3>
+                                <p className="text-lg text-gray-700">
                                     Our home loan expert will contact you within 24 hours to assist with your application.
                                 </p>
                             </div>
@@ -324,65 +354,67 @@
 
                         {/* Results */}
                         {results && results.recommendations && results.recommendations.length > 0 && (
-                            <div className="space-y-6">
-                                <h3 className="text-xl font-semibold text-gray-900">
-                                    Top {results.recommendations.length} Bank Recommendations for Your Home Loan
+                            <div className="space-y-8">
+                                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-2">
+                                    Top {results.recommendations.length} Bank Recommendations
                                 </h3>
+                                <p className="text-center text-gray-600 mb-6">Based on your profile, these banks offer the best terms</p>
                                 
                                 {results.recommendations.map((bank, index) => (
-                                    <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden border-l-4 border-red-500">
+                                    <div key={index} className="bg-white rounded-2xl card-shadow overflow-hidden hover-scale">
                                         {/* Bank Header */}
-                                        <div className="bg-gray-50 p-4 border-b">
+                                        <div className="gradient-bg p-6">
                                             <div className="flex justify-between items-center">
                                                 <div>
-                                                    <h4 className="text-xl font-bold text-gray-900">{bank.bankName}</h4>
-                                                    <span className={`inline-block mt-1 text-sm px-3 py-1 rounded-full ${
-                                                        bank.bankType === 'Nationalised' 
-                                                            ? 'bg-blue-100 text-blue-700' 
-                                                            : 'bg-gray-100 text-gray-700'
-                                                    }`}>
-                                                        {bank.bankType} Bank
-                                                    </span>
+                                                    <h4 className="text-2xl md:text-3xl font-bold text-white">{bank.bankName}</h4>
+                                                    {bank.bankType === 'Nationalised' && (
+                                                        <span className="inline-block mt-2 bg-white/20 text-white px-4 py-1 rounded-full text-sm font-medium backdrop-blur">
+                                                            Nationalised Bank
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="text-center">
-                                                    <p className="text-3xl font-bold text-green-600">
+                                                    <p className="text-3xl md:text-4xl font-bold text-white">
                                                         {formatCurrency(bank.maxLoanAmount)}
                                                     </p>
-                                                    <p className="text-sm text-gray-600 mt-1">Maximum Loan Amount</p>
+                                                    <p className="text-sm text-white/90 mt-1">Maximum Loan Amount</p>
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Bank Details */}
-                                        <div className="p-6">
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                                                <div className="text-center p-4 bg-red-50 rounded-lg">
-                                                    <p className="text-sm text-gray-600 mb-1">Interest Rate</p>
-                                                    <p className="text-2xl font-bold text-red-600">{bank.roi}%</p>
+                                        <div className="p-8">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                                <div className="text-center p-6 bg-gradient-to-br from-red-50 to-pink-50 rounded-xl">
+                                                    <Icon name="percent" className="h-8 w-8 text-red-500 mx-auto mb-3" />
+                                                    <p className="text-sm text-gray-600 mb-2">Interest Rate</p>
+                                                    <p className="text-3xl font-bold text-red-600">{bank.roi}%</p>
                                                     <p className="text-xs text-gray-500 mt-1">per annum</p>
                                                 </div>
-                                                <div className="text-center p-4 bg-green-50 rounded-lg">
-                                                    <p className="text-sm text-gray-600 mb-1">LTV Ratio</p>
-                                                    <p className="text-2xl font-bold text-green-600">{bank.ltvPercent}%</p>
+                                                <div className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl">
+                                                    <Icon name="pie-chart" className="h-8 w-8 text-green-500 mx-auto mb-3" />
+                                                    <p className="text-sm text-gray-600 mb-2">LTV Ratio</p>
+                                                    <p className="text-3xl font-bold text-green-600">{bank.ltvPercent}%</p>
                                                     <p className="text-xs text-gray-500 mt-1">of property value</p>
                                                 </div>
-                                                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                                                    <p className="text-sm text-gray-600 mb-1">Your Property Value</p>
-                                                    <p className="text-2xl font-bold text-blue-600">{formatCurrency(results.propertyValue)}</p>
+                                                <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl">
+                                                    <Icon name="home" className="h-8 w-8 text-blue-500 mx-auto mb-3" />
+                                                    <p className="text-sm text-gray-600 mb-2">Property Value</p>
+                                                    <p className="text-3xl font-bold text-blue-600">{formatCurrency(results.propertyValue)}</p>
                                                     <p className="text-xs text-gray-500 mt-1">total value</p>
                                                 </div>
                                             </div>
 
                                             {/* Property Types */}
                                             {bank.propertyTypes && bank.propertyTypes.length > 0 && (
-                                                <div className="border-t pt-4">
-                                                    <p className="text-sm font-semibold text-gray-700 mb-3">
-                                                        This bank accepts the following property types:
+                                                <div className="border-t-2 pt-6">
+                                                    <p className="text-base font-bold text-gray-800 mb-4">
+                                                        Accepted Property Types:
                                                     </p>
-                                                    <div className="flex flex-wrap gap-2">
+                                                    <div className="flex flex-wrap gap-3">
                                                         {bank.propertyTypes.map((type, idx) => (
-                                                            <span key={idx} className="flex items-center space-x-1 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                                                <Icon name="check-circle-2" className="h-4 w-4" />
+                                                            <span key={idx} className="flex items-center space-x-2 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold">
+                                                                <Icon name="check-circle-2" className="h-5 w-5" />
                                                                 <span>{type}</span>
                                                             </span>
                                                         ))}
@@ -394,7 +426,7 @@
                                 ))}
 
                                 {results.totalEligibleBanks > 2 && (
-                                    <p className="text-center text-gray-600 text-sm mt-6">
+                                    <p className="text-center text-gray-600 text-base mt-8">
                                         Showing top 2 out of {results.totalEligibleBanks} eligible banks based on best ROI and LTV combination
                                     </p>
                                 )}
@@ -403,10 +435,10 @@
 
                         {/* No Results */}
                         {results && results.recommendations && results.recommendations.length === 0 && (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-                                <Icon name="alert-circle" className="h-12 w-12 text-yellow-600 mx-auto mb-3" />
-                                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Eligible Banks Found</h3>
-                                <p className="text-gray-600">
+                            <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-2xl p-8 text-center hover-scale">
+                                <Icon name="alert-circle" className="h-16 w-16 text-yellow-600 mx-auto mb-4" />
+                                <h3 className="text-2xl font-bold text-gray-900 mb-3">No Eligible Banks Found</h3>
+                                <p className="text-lg text-gray-700">
                                     No banks found for credit score {creditScore}. Please check your credit score or contact our support team for assistance.
                                 </p>
                             </div>
